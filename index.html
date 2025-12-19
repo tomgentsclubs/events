@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Events Calendar - GentsClubs.com</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0d2818 0%, #1a472a 50%, #0d2818 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            margin-bottom: 30px;
+        }
+
+        .brand {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd700;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            font-size: 48px;
+            color: #fff;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 0 #8b1428;
+        }
+
+        .subtitle {
+            font-size: 20px;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .calendar-wrapper {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 32px;
+            }
+            .brand {
+                font-size: 18px;
+            }
+            .header {
+                padding: 20px 10px;
+            }
+            .calendar-wrapper {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="brand">🎩 GentsClubs.com 🎩</div>
+            <h1>Events Calendar</h1>
+            <div class="subtitle">All upcoming events and parties</div>
+        </div>
+
+        <div class="calendar-wrapper">
+            <!-- Elfsight Event Calendar -->
+            <script src="https://elfsightcdn.com/platform.js" async></script>
+            <div class="elfsight-app-a420d7b3-7429-492e-b394-3f772b3d23b3" data-elfsight-app-lazy></div>
+        </div>
+    </div>
+</body>
+</html>
