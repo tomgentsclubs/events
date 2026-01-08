@@ -303,99 +303,113 @@
             }, 500);
         }
         
-        // Function to check if calendar loaded correctly
-        function checkCalendarLayout() {
-            const calendarElement = document.querySelector('.elfsight-app-a420d7b3-7429-492e-b394-3f772b3d23b3');
-            if (!calendarElement) return 'unknown';
-            
-            // Look for event cards - Elfsight typically uses classes with 'event' or specific card structures
-            const eventCards = calendarElement.querySelectorAll('[class*="event"]');
-            
-            if (eventCards.length < 2) {
-                // Not enough events to check, assume ok
-                return 'ok';
-            }
-            
-            // Check if events are overlapping/stacked incorrectly
-            const cards = Array.from(eventCards).slice(0, 4); // Check first 4 events
-            
-            for (let i = 1; i < cards.length; i++) {
-                const rect1 = cards[i - 1].getBoundingClientRect();
-                const rect2 = cards[i].getBoundingClientRect();
-                
-                // Check if cards are stacked at exact same position (overlapping)
-                const sameTop = Math.abs(rect1.top - rect2.top) < 10;
-                const sameLeft = Math.abs(rect1.left - rect2.left) < 10;
-                
-                // Check if cards have negligible height (cut off)
-                const tooSmall = rect1.height < 50 || rect2.height < 50;
-                
-                if ((sameTop && sameLeft) || tooSmall) {
-                    console.log('Detected incorrect calendar layout - events stacked or cut off');
-                    return 'bad';
-                }
-            }
-            
-            return 'ok';
+        // Check if this is a fresh load (no cache-bust parameter)
+        const urlParams = new URLSearchParams(window.location.search);
+        const isCacheBusted = urlParams.has('_cb');
+        
+        // If not cache-busted yet, reload with cache-busting parameter
+        if (!isCacheBusted) {
+            console.log('First load - forcing cache-busted reload...');
+            const cacheBustUrl = window.location.href + (window.location.href.includes('?') ? '&' : '?') + '_cb=' + Date.now();
+            window.location.replace(cacheBustUrl);
+            // Stop execution here as we're reloading
+        } else {
+            console.log('Cache-busted load complete');
         }
         
-        // Use sessionStorage to track reload attempts
-        const STORAGE_KEY = 'calendarReloadAttempt';
-        const MAX_RELOAD_ATTEMPTS = 2;
-        
-        function getReloadAttempt() {
-            return parseInt(sessionStorage.getItem(STORAGE_KEY) || '0');
+        // Fix Elfsight layout with multiple zoom cycles and forced recalculations
+        function fixCalendarLayout() {
+            console.log('Applying multi-cycle zoom fix to calendar layout...');
+            
+            const html = document.documentElement;
+            const body = document.body;
+            
+            // Cycle 1: Zoom to 67%
+            const zoomCycle = (zoomLevel, duration) => {
+                return new Promise((resolve) => {
+                    // Apply zoom
+                    html.style.transformOrigin = 'top left';
+                    html.style.transform = `scale(${zoomLevel})`;
+                    body.style.zoom = zoomLevel.toString();
+                    
+                    // Force HARD reflow with getComputedStyle
+                    void html.offsetHeight;
+                    void body.offsetHeight;
+                    window.getComputedStyle(html).transform;
+                    window.getComputedStyle(body).zoom;
+                    
+                    // Fire resize
+                    window.dispatchEvent(new Event('resize'));
+                    
+                    console.log(`Zoomed to ${zoomLevel * 100}%`);
+                    
+                    // Wait at this zoom level
+                    setTimeout(resolve, duration);
+                });
+            };
+            
+            const resetZoom = () => {
+                return new Promise((resolve) => {
+                    html.style.transform = '';
+                    body.style.zoom = '1';
+                    
+                    void html.offsetHeight;
+                    void body.offsetHeight;
+                    window.getComputedStyle(html).transform;
+                    window.getComputedStyle(body).zoom;
+                    
+                    // Multiple resize events
+                    for (let i = 0; i < 5; i++) {
+                        setTimeout(() => window.dispatchEvent(new Event('resize')), i * 50);
+                    }
+                    
+                    console.log('Reset to 100%');
+                    setTimeout(resolve, 300);
+                });
+            };
+            
+            // Execute multiple zoom cycles
+            (async () => {
+                await zoomCycle(0.67, 600);  // Zoom to 67% for 600ms
+                await resetZoom();            // Back to 100%
+                await new Promise(r => setTimeout(r, 200)); // Brief pause
+                await zoomCycle(0.5, 600);   // Zoom to 50% for 600ms
+                await resetZoom();            // Back to 100%
+                await new Promise(r => setTimeout(r, 200)); // Brief pause
+                await zoomCycle(0.67, 400);  // One more time at 67%
+                await resetZoom();            // Final reset
+                console.log('Multi-cycle zoom fix complete');
+            })();
         }
         
-        function incrementReloadAttempt() {
-            const current = getReloadAttempt();
-            sessionStorage.setItem(STORAGE_KEY, (current + 1).toString());
-        }
+        // Hide loading bar after 3 seconds
+        setTimeout(() => {
+            hideLoadingOverlay();
+        }, 3000);
         
-        function clearReloadAttempt() {
-            sessionStorage.removeItem(STORAGE_KEY);
-        }
-        
-        // Force a hard refresh with cache bypass
-        function forceHardRefresh() {
-            console.log('Forcing hard refresh to fix calendar layout...');
-            incrementReloadAttempt();
-            // Hard reload bypassing cache
-            window.location.reload(true);
-        }
-        
-        // Wait for page to be fully loaded before checking
+        // AFTER the calendar has loaded, apply the zoom fix
         window.addEventListener('load', () => {
-            const attempt = getReloadAttempt();
-            console.log('Calendar load attempt:', attempt + 1);
-            
-            // Give the Elfsight calendar time to properly initialize and calculate layout
+            // Wait for Elfsight to fully load and render
             setTimeout(() => {
-                const layoutStatus = checkCalendarLayout();
-                console.log('Calendar layout status:', layoutStatus);
-                
-                if (layoutStatus === 'bad' && attempt < MAX_RELOAD_ATTEMPTS) {
-                    // Calendar loaded incorrectly and we haven't exceeded max attempts
-                    // Force hard refresh while user is still behind loading bar
-                    forceHardRefresh();
+                // Check if calendar is loaded by looking for the widget
+                const calendar = document.querySelector('.elfsight-app-a420d7b3-7429-492e-b394-3f772b3d23b3');
+                if (calendar && calendar.children.length > 0) {
+                    console.log('Calendar loaded, applying zoom fix...');
+                    fixCalendarLayout();
                 } else {
-                    // Either layout is good, unknown, or we've tried enough times
-                    // Clear the attempt counter and show the calendar
-                    clearReloadAttempt();
-                    hideLoadingOverlay();
+                    console.log('Calendar not fully loaded yet, waiting...');
+                    // Try again after a bit more time
+                    setTimeout(() => {
+                        fixCalendarLayout();
+                    }, 1000);
                 }
-            }, 4000); // 4 seconds - gives calendar time to render
+            }, 3500); // Apply fix AFTER loading bar is hidden (after 3.5 seconds)
         });
         
-        // Fallback: Always hide loading after 10 seconds maximum
+        // Fallback: Always hide loading after 5 seconds maximum
         setTimeout(() => {
-            const overlay = document.getElementById('loadingOverlay');
-            if (overlay && !overlay.classList.contains('hidden')) {
-                console.log('Fallback: Hiding loading overlay after maximum wait time');
-                clearReloadAttempt();
-                hideLoadingOverlay();
-            }
-        }, 10000); // 10 second absolute maximum
+            hideLoadingOverlay();
+        }, 5000);
     
     </script>
 </body>
