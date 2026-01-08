@@ -160,6 +160,41 @@
             font-weight: bold;
         }
         
+        /* Calendar fix banner */
+        .fix-banner {
+            background: linear-gradient(135deg, #8b1428 0%, #a91d3a 100%);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            line-height: 1.5;
+            box-shadow: 0 4px 15px rgba(139, 20, 40, 0.3);
+        }
+        
+        .fix-button {
+            background: #ffd700;
+            color: #1a1a1a;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .fix-button:hover {
+            background: #ffed4e;
+            transform: scale(1.05);
+        }
+        
+        .fix-button:active {
+            transform: scale(0.98);
+        }
+        
         /* Mobile responsive */
         @media (max-width: 768px) {
             h1 {
@@ -189,6 +224,11 @@
         <div class="line-banner" id="lineBanner">
             ⚠️ This page works best in Safari or Chrome.<br>
             If it didn't open automatically, <a href="#" onclick="copyToClipboard(); return false;">tap here to copy the link</a> and paste it in your browser.
+        </div>
+        
+        <!-- Calendar display fix banner -->
+        <div class="fix-banner" id="fixBanner">
+            📅 Calendar not displaying correctly? <button onclick="manualFix()" class="fix-button">Click here to refresh</button>
         </div>
         
         <div class="header">
@@ -313,98 +353,30 @@
             const cacheBustUrl = window.location.href + (window.location.href.includes('?') ? '&' : '?') + '_cb=' + Date.now();
             window.location.replace(cacheBustUrl);
             // Stop execution here as we're reloading
-        } else {
-            console.log('Cache-busted load complete');
         }
         
-        // Fix Elfsight layout with multiple zoom cycles and forced recalculations
-        function fixCalendarLayout() {
-            console.log('Applying multi-cycle zoom fix to calendar layout...');
+        // Simple loading overlay hide function
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.add('hidden');
             
-            const html = document.documentElement;
-            const body = document.body;
-            
-            // Cycle 1: Zoom to 67%
-            const zoomCycle = (zoomLevel, duration) => {
-                return new Promise((resolve) => {
-                    // Apply zoom
-                    html.style.transformOrigin = 'top left';
-                    html.style.transform = `scale(${zoomLevel})`;
-                    body.style.zoom = zoomLevel.toString();
-                    
-                    // Force HARD reflow with getComputedStyle
-                    void html.offsetHeight;
-                    void body.offsetHeight;
-                    window.getComputedStyle(html).transform;
-                    window.getComputedStyle(body).zoom;
-                    
-                    // Fire resize
-                    window.dispatchEvent(new Event('resize'));
-                    
-                    console.log(`Zoomed to ${zoomLevel * 100}%`);
-                    
-                    // Wait at this zoom level
-                    setTimeout(resolve, duration);
-                });
-            };
-            
-            const resetZoom = () => {
-                return new Promise((resolve) => {
-                    html.style.transform = '';
-                    body.style.zoom = '1';
-                    
-                    void html.offsetHeight;
-                    void body.offsetHeight;
-                    window.getComputedStyle(html).transform;
-                    window.getComputedStyle(body).zoom;
-                    
-                    // Multiple resize events
-                    for (let i = 0; i < 5; i++) {
-                        setTimeout(() => window.dispatchEvent(new Event('resize')), i * 50);
-                    }
-                    
-                    console.log('Reset to 100%');
-                    setTimeout(resolve, 300);
-                });
-            };
-            
-            // Execute multiple zoom cycles
-            (async () => {
-                await zoomCycle(0.67, 600);  // Zoom to 67% for 600ms
-                await resetZoom();            // Back to 100%
-                await new Promise(r => setTimeout(r, 200)); // Brief pause
-                await zoomCycle(0.5, 600);   // Zoom to 50% for 600ms
-                await resetZoom();            // Back to 100%
-                await new Promise(r => setTimeout(r, 200)); // Brief pause
-                await zoomCycle(0.67, 400);  // One more time at 67%
-                await resetZoom();            // Final reset
-                console.log('Multi-cycle zoom fix complete');
-            })();
+            // Remove overlay from DOM after transition
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 500);
+        }
+        
+        // Manual fix function - reload without cache
+        function manualFix() {
+            console.log('Manual fix triggered - reloading...');
+            const cacheBustUrl = window.location.pathname + '?_cb=' + Date.now();
+            window.location.replace(cacheBustUrl);
         }
         
         // Hide loading bar after 3 seconds
         setTimeout(() => {
             hideLoadingOverlay();
         }, 3000);
-        
-        // AFTER the calendar has loaded, apply the zoom fix
-        window.addEventListener('load', () => {
-            // Wait for Elfsight to fully load and render
-            setTimeout(() => {
-                // Check if calendar is loaded by looking for the widget
-                const calendar = document.querySelector('.elfsight-app-a420d7b3-7429-492e-b394-3f772b3d23b3');
-                if (calendar && calendar.children.length > 0) {
-                    console.log('Calendar loaded, applying zoom fix...');
-                    fixCalendarLayout();
-                } else {
-                    console.log('Calendar not fully loaded yet, waiting...');
-                    // Try again after a bit more time
-                    setTimeout(() => {
-                        fixCalendarLayout();
-                    }, 1000);
-                }
-            }, 3500); // Apply fix AFTER loading bar is hidden (after 3.5 seconds)
-        });
         
         // Fallback: Always hide loading after 5 seconds maximum
         setTimeout(() => {
